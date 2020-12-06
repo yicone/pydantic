@@ -491,6 +491,11 @@ class PatternError(PydanticValueError):
     msg_template = 'Invalid regular expression'
 
 
+class PathLikeError(PydanticValueError):
+    code = 'path_like'
+    msg_template = 'Invalid path like object'
+
+
 class DataclassTypeError(PydanticTypeError):
     code = 'dataclass'
     msg_template = 'instance of {class_name}, tuple or dict expected'

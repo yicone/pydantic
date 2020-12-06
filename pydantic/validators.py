@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal, DecimalException
 from enum import Enum, IntEnum
 from ipaddress import IPv4Address, IPv4Interface, IPv4Network, IPv6Address, IPv6Interface, IPv6Network
+from os import PathLike
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -523,6 +524,13 @@ def pattern_validator(v: Any) -> Pattern[str]:
         raise errors.PatternError()
 
 
+def path_like_validator(v: Any) -> str:
+    try:
+        return v.__fspath__()
+    except AttributeError:
+        raise errors.PathLikeError()
+
+
 class IfConfig:
     def __init__(self, validator: AnyCallable, *config_attr_names: str) -> None:
         self.validator = validator
@@ -609,6 +617,9 @@ def find_validators(  # noqa: C901 (ignore complexity)
         return
     if type_ is IntEnum:
         yield int_enum_validator
+        return
+    if type_ is PathLike:
+        yield path_like_validator
         return
 
     class_ = get_class(type_)
