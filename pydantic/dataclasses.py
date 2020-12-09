@@ -79,6 +79,12 @@ def is_builtin_dataclass(_cls: Type[Any]) -> bool:
     return not hasattr(_cls, '__processed__') and dataclasses.is_dataclass(_cls)
 
 
+def is_pydantic_dataclass(_cls: Type[Any]) -> bool:
+    import dataclasses
+
+    return hasattr(_cls, '__processed__') and dataclasses.is_dataclass(_cls)
+
+
 def _process_class(
     _cls: Type[Any],
     init: bool,

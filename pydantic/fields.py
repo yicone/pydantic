@@ -40,7 +40,7 @@ from .typing import (
     new_type_supertype,
 )
 from .utils import PyObjectStr, Representation, lenient_issubclass, sequence_like, smart_deepcopy
-from .validators import constant_validator, dict_validator, find_validators, validate_json
+from .validators import coerce_set_type_validator, constant_validator, dict_validator, find_validators, validate_json
 
 Required: Any = Ellipsis
 
@@ -557,8 +557,9 @@ class ModelField(Representation):
         if self.parse_json:
             self.pre_validators.append(make_generic_validator(validate_json))
 
+        self.post_validators.append(make_generic_validator(coerce_set_type_validator))
+
         self.pre_validators = self.pre_validators or None
-        self.post_validators = self.post_validators or None
 
     def validate(
         self, v: Any, values: Dict[str, Any], *, loc: 'LocStr', cls: Optional['ModelOrDc'] = None

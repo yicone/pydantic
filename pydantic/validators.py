@@ -181,6 +181,39 @@ def constant_validator(v: 'Any', field: 'ModelField') -> 'Any':
     return v
 
 
+def coerce_set_type_validator(v: 'Any', field: 'ModelField', config: 'BaseConfig') -> 'Any':
+    """
+    Validator run for all the models at the end.
+    It just tries to coerce the value to the set type by the user
+    """
+    if type(v) is field.outer_type_:
+        return v
+
+    # do nothing if v is None
+    if v is None and field.allow_none:
+        return v
+
+    # do nothing for custom classes
+    if hasattr(field.outer_type_, '__get_validators__'):
+        return v
+
+    # do nothing for enum members if `use_enum_values` is set
+    if lenient_issubclass(field.outer_type_, Enum) and config.use_enum_values:
+        return v
+
+    from .dataclasses import is_pydantic_dataclass
+
+    # do nothing for pydantic dataclasses
+    if is_pydantic_dataclass(type(v)):
+        return v
+
+    # try to coerce to set type
+    try:
+        return field.outer_type_(v)
+    except (AttributeError, ValueError, TypeError):
+        return v
+
+
 def anystr_length_validator(v: 'StrBytes', config: 'BaseConfig') -> 'StrBytes':
     v_len = len(v)
 

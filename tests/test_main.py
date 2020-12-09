@@ -1425,3 +1425,17 @@ def test_base_config_type_hinting():
         a: int
 
     get_type_hints(M.__config__)
+
+
+def test_coerce_set_type():
+    class CustomString(str):
+        @property
+        def answer(self) -> str:
+            return f'{self}? Yes!'
+
+    class Model(BaseModel):
+        foo: CustomString
+
+    y = Model(foo='Pika')
+    assert type(y.foo) is CustomString
+    assert y.foo.answer == 'Pika? Yes!'
