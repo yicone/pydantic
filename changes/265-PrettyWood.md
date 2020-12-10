@@ -1,0 +1,1 @@
+Avoid reconstructing models used as fields of another model on validation

@@ -33,7 +33,10 @@ if TYPE_CHECKING:
     from .dataclasses import Dataclass  # noqa: F401
     from .fields import ModelField  # noqa: F401
     from .main import BaseConfig, BaseModel  # noqa: F401
-    from .typing import AbstractSetIntStr, DictIntStrAny, IntStr, MappingIntStrAny, ReprArgs  # noqa: F401
+    from .typing import AbstractSetIntStr, AnyCallable, DictIntStrAny, IntStr, MappingIntStrAny, ReprArgs  # noqa: F401
+
+    ClassPropertyFunc = Union[AnyCallable, classmethod, staticmethod]
+    ClassStaticMethod = Union[classmethod, staticmethod]
 
 __all__ = (
     'import_string',
@@ -56,6 +59,7 @@ __all__ = (
     'ClassAttribute',
     'path_type',
     'ROOT_KEY',
+    'classproperty',
 )
 
 ROOT_KEY = '__root__'
@@ -639,3 +643,33 @@ def is_valid_private_name(name: str) -> bool:
         '__orig_bases__',
         '__qualname__',
     }
+
+
+class ClassPropertyDescriptor:
+    def __init__(self, fget: 'ClassStaticMethod', fset: Optional['ClassStaticMethod'] = None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj: Any, cls_: Optional[Type[Any]] = None) -> None:
+        if cls_ is None:
+            cls_ = type(obj)
+        return self.fget.__get__(obj, cls_)()
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        if not self.fset:
+            raise AttributeError("can't set attribute")
+        type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func: 'ClassPropertyFunc') -> 'ClassPropertyDescriptor':
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+
+def classproperty(func: 'ClassPropertyFunc') -> ClassPropertyDescriptor:
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+
+    return ClassPropertyDescriptor(func)

@@ -41,6 +41,7 @@ from .utils import (
     GetterDict,
     Representation,
     ValueItems,
+    classproperty,
     generate_model_signature,
     is_valid_field,
     is_valid_private_name,
@@ -127,6 +128,14 @@ class BaseConfig:
     json_dumps: Callable[..., str] = json.dumps
     json_encoders: Dict[Type[Any], AnyCallable] = {}
     underscore_attrs_are_private: bool = False
+
+    copy_on_model_validation: bool = False
+
+    @classproperty
+    def copy_on_model_validation_flag(cls) -> bool:
+        if cls.copy_on_model_validation:
+            warnings.warn('Model are copied on validation', UserWarning)
+        return cls.copy_on_model_validation
 
     @classmethod
     def get_field_info(cls, name: str) -> Dict[str, Any]:
@@ -662,7 +671,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         if isinstance(value, dict):
             return cls(**value)
         elif isinstance(value, cls):
-            return value.copy()
+            return value.copy() if cls.__config__.copy_on_model_validation_flag else value
         elif cls.__config__.orm_mode:
             return cls.from_orm(value)
         elif cls.__custom_root_type__:
