@@ -662,7 +662,7 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         if isinstance(value, dict):
             return cls(**value)
         elif isinstance(value, cls):
-            return value.copy()
+            return value
         elif cls.__config__.orm_mode:
             return cls.from_orm(value)
         elif cls.__custom_root_type__:
