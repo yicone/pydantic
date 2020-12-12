@@ -85,3 +85,13 @@ def create_module(tmp_path, request):
         return module
 
     return run
+
+
+@pytest.fixture
+def mock_global_config(mocker):
+    def inner(global_config_flag: str, desired_flag_value: bool):
+        import pydantic.global_config as GLOBAL_CONFIG
+
+        mocker.patch.object(GLOBAL_CONFIG, global_config_flag, new=desired_flag_value)
+
+    return inner

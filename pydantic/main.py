@@ -662,7 +662,9 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         if isinstance(value, dict):
             return cls(**value)
         elif isinstance(value, cls):
-            return value
+            from .global_config import COPY_ON_MODEL_VALIDATION
+
+            return value.copy() if COPY_ON_MODEL_VALIDATION else value
         elif cls.__config__.orm_mode:
             return cls.from_orm(value)
         elif cls.__custom_root_type__:

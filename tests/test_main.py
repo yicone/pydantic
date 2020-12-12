@@ -1427,7 +1427,9 @@ def test_base_config_type_hinting():
     get_type_hints(M.__config__)
 
 
-def test_inherited_model_field():
+def test_inherited_model_field_default():
+    """By default submodels are copied on validation"""
+
     class Image(BaseModel):
         path: str
 
@@ -1435,13 +1437,27 @@ def test_inherited_model_field():
             return id(self)
 
     class Item(BaseModel):
-        images: List[Image]
+        image: Image
 
-    image_1 = Image(path='my_image1.png')
-    image_2 = Image(path='my_image2.png')
+    image = Image(path='my_image1.png')
 
-    item = Item(images={image_1, image_2})
-    print(image_1 in item.images)
+    item = Item(image=image)
+    assert item.image is not image
 
-    assert id(image_1) == id(item.images[0])
-    assert id(image_2) == id(item.images[1])
+
+def test_inherited_model_field_no_copy(mock_global_config):
+    mock_global_config('COPY_ON_MODEL_VALIDATION', False)
+
+    class Image(BaseModel):
+        path: str
+
+        def __hash__(self):
+            return id(self)
+
+    class Item(BaseModel):
+        image: Image
+
+    image = Image(path='my_image1.png')
+
+    item = Item(image=image)
+    assert item.image is image
