@@ -8,7 +8,7 @@ from typing import ClassVar, Dict, FrozenSet, List, Optional
 import pytest
 
 import pydantic
-from pydantic import BaseModel, ValidationError, validator
+from pydantic import BaseModel, Extra, ValidationError, validator
 
 
 def test_simple():
@@ -833,3 +833,15 @@ class ModelForPickle(pydantic.BaseModel):
     # ensure the restored dataclass is still a pydantic dataclass
     with pytest.raises(ValidationError, match='value\n +value is not a valid integer'):
         restored_obj.dataclass.value = 'value of a wrong type'
+
+
+def test_allow_extra():
+    class C:
+        extra = Extra.ignore
+
+    @pydantic.dataclasses.dataclass(config=C)
+    class Foo:
+        a: str
+        b: str
+
+    Foo(**{"a": "bar", "b": "foo", "c": 1})
