@@ -60,6 +60,15 @@ class UndefinedType:
 
 Undefined = UndefinedType()
 
+BUILTIN_TO_TYPING: Dict[Type[Any], Any] = {
+    list: List[Any],
+    tuple: Tuple[Any, ...],
+    dict: Dict[Any, Any],
+    set: Set[Any],
+    frozenset: FrozenSet[Any],
+    type: Type[Any],
+}
+
 if TYPE_CHECKING:
     from .class_validators import ValidatorsList  # noqa: F401
     from .error_wrappers import ErrorList
@@ -415,6 +424,9 @@ class ModelField(Representation):
             return
         elif is_literal_type(self.type_):
             return
+
+        if self.type_ in BUILTIN_TO_TYPING:
+            self.type_ = BUILTIN_TO_TYPING[self.type_]
 
         origin = get_origin(self.type_)
         if origin is None:

@@ -1274,7 +1274,7 @@ class DisplayGen(Generic[T1, T2]):
         (FrozenSet[int], 'FrozenSet[int]'),
         (Tuple[int, ...], 'Tuple[int, ...]'),
         (Optional[List[int]], 'Optional[List[int]]'),
-        (dict, 'dict'),
+        (dict, 'Mapping[Any, Any]'),
         (DisplayGen[bool, str], 'DisplayGen[bool, str]'),
     ],
 )
