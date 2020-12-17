@@ -1006,10 +1006,18 @@ def test_ipvanynetwork_type():
     }
 
 
-@pytest.mark.parametrize('annotation', [Callable, Callable[[int], int]])
-def test_callable_type(annotation):
+@pytest.mark.parametrize(
+    'annotation,default_value',
+    [
+        (Callable, ...),
+        (Callable, Field(lambda x: x)),
+        (Callable[[int], int], ...),
+        (Callable[[int], int], Field(lambda x: x + 2)),
+    ],
+)
+def test_callable_type(annotation, default_value):
     class Model(BaseModel):
-        callback: annotation
+        callback: annotation = default_value
         foo: int
 
     with pytest.warns(UserWarning):
