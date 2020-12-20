@@ -22,6 +22,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
 )
 from uuid import UUID
 
@@ -47,11 +48,13 @@ from pydantic import (
     NonNegativeInt,
     NonPositiveFloat,
     NonPositiveInt,
+    PaymentCardNumber,
     PositiveFloat,
     PositiveInt,
     PyObject,
     SecretBytes,
     SecretStr,
+    Strict,
     StrictBool,
     StrictBytes,
     StrictFloat,
@@ -2609,3 +2612,39 @@ def test_deque_json():
         v: Deque[int]
 
     assert Model(v=deque((1, 2, 3))).json() == '{"v": [1, 2, 3]}'
+
+
+def test_strict():
+    class PaymentCard(BaseModel):
+        card_number: PaymentCardNumber
+        strict_card_number: Strict[PaymentCardNumber]
+
+    assert PaymentCard(
+        card_number=PaymentCardNumber('0000000000000000'),
+        strict_card_number=PaymentCardNumber('0000000000000000'),
+    )
+
+    with pytest.raises(ValidationError):
+        PaymentCard(
+            card_number='0000000000000000',
+            strict_card_number='0000000000000000',
+        )
+
+    with pytest.raises(ValidationError):
+        PaymentCard(card_number='00', strict_card_number='00')
+
+    with pytest.raises(ValidationError):
+        PaymentCard(
+            card_number=PaymentCardNumber('00'),
+            strict_card_number=PaymentCardNumber('00'),
+        )
+
+    class Model(BaseModel):
+        a: Union[str, int]
+        strict_a: Strict[Union[str, int]]
+
+    m = Model(a=3, strict_a=3)
+    assert m.dict() == {'a': '3', 'strict_a': 3}
+
+    m = Model(a='3', strict_a='3')
+    assert m.dict() == {'a': '3', 'strict_a': '3'}

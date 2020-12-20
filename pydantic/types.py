@@ -11,6 +11,7 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
+    Generic,
     List,
     Optional,
     Pattern,
@@ -24,6 +25,7 @@ from typing import (
 from uuid import UUID
 
 from . import errors
+from .typing import display_as_type, get_args, get_origin
 from .utils import import_string, update_not_none
 from .validators import (
     bytes_validator,
@@ -50,6 +52,7 @@ __all__ = [
     'NoneBytes',
     'StrBytes',
     'NoneStrBytes',
+    'Strict',
     'StrictStr',
     'ConstrainedBytes',
     'conbytes',
@@ -138,6 +141,50 @@ def conbytes(*, strip_whitespace: bool = False, min_length: int = None, max_leng
 
 
 T = TypeVar('T')
+
+
+class Strict(Generic[T]):
+    __origin__: Any
+    __args__: Tuple[Type[T], ...]
+
+    inner_type: Type[T]
+    strict = True
+
+    @classmethod
+    def __class_getitem__(cls, inner_type: Type[T]) -> Type[T]:
+        args = get_args(inner_type)
+        origin = get_origin(inner_type)
+        if origin is Union:
+            extra_ns = {
+                '__args__': tuple(Strict[a] for a in args) or (inner_type,),
+                '__origin__': origin,
+                'inner_type': inner_type,
+            }
+            return new_class(f'Strict[{display_as_type(inner_type)}]', (cls,), {}, lambda ns: ns.update(extra_ns))
+        else:
+            extra_ns = {
+                '__args__': (inner_type,),
+                '__origin__': origin,
+                'inner_type': inner_type,
+                'strict': True,
+            }
+            return new_class(
+                f'Strict[{display_as_type(inner_type)}]', (inner_type, cls), {}, lambda ns: ns.update(extra_ns)
+            )
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.strict_validate
+        try:
+            yield from cls.inner_type.__get_validators__()
+        except AttributeError:
+            pass
+
+    @classmethod
+    def strict_validate(cls, value: Any) -> T:
+        if not isinstance(value, cls.inner_type):
+            raise TypeError(f'{value!r} is not of valid type')
+        return value
 
 
 # This types superclass should be List[T], but cython chokes on that...
