@@ -41,6 +41,7 @@ from pydantic import (
     Field,
     FilePath,
     Json,
+    Loose,
     NameEmail,
     NegativeFloat,
     NegativeInt,
@@ -2685,3 +2686,35 @@ def test_strict():
         c: Strict[Strict[int]]
 
     assert Model(a=1, b=2, c=3).dict() == {'a': 1, 'b': 2, 'c': 3}
+
+
+def test_loose():
+    class LooseModel(BaseModel):
+        a: Union[str, int]
+        b: Union[str, int]
+
+    assert LooseModel(a=3, b=3).dict() == {'a': '3', 'b': '3'}
+
+    class LooseModelWithStrictField(BaseModel):
+        a: Union[str, int]
+        b: Strict[Union[str, int]]
+
+    assert LooseModelWithStrictField(a=3, b=3).dict() == {'a': '3', 'b': 3}
+
+    class StrictModel(BaseModel):
+        a: Union[str, int]
+        b: Union[str, int]
+
+        class Config:
+            strict = True
+
+    assert StrictModel(a=3, b=3).dict() == {'a': 3, 'b': 3}
+
+    class StrictModelWithLooseField(BaseModel):
+        a: Union[str, int]
+        b: Loose[Union[str, int]]
+
+        class Config:
+            strict = True
+
+    assert StrictModelWithLooseField(a=3, b=3).dict() == {'a': 3, 'b': '3'}
