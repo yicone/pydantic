@@ -1,6 +1,6 @@
-from typing import Any, Generic, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, Set, TypeVar, Union
 
-from pydantic import BaseModel, BaseSettings, Extra, Field
+from pydantic import BaseModel, BaseSettings, Extra, Field, Strict
 from pydantic.dataclasses import dataclass
 from pydantic.generics import GenericModel
 
@@ -202,3 +202,10 @@ class AddProject:
 
 
 p = AddProject(name='x', slug='y', description='z')
+
+
+class StrictModel(BaseModel):
+    ko1: Strict[int] = '3'
+    ko2: Strict[Union[str, int]] = ['3']
+    ko3: Strict[List[int]] = [1, '2', 3]
+    ko4: Strict[Dict[str, int]] = {'a': '1', 'b': 2}

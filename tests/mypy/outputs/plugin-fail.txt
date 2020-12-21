@@ -25,3 +25,7 @@
 197: note: Possible overload variant:
 197: note:     def dataclass(*, init: bool = ..., repr: bool = ..., eq: bool = ..., order: bool = ..., unsafe_hash: bool = ..., frozen: bool = ..., config: Optional[Type[Any]] = ...) -> Callable[[Type[Any]], Type[Dataclass]]
 197: note:     <1 more non-matching overload not shown>
+208: error: Incompatible types in assignment (expression has type "str", variable has type "Optional[int]")  [assignment]
+209: error: Incompatible types in assignment (expression has type "List[str]", variable has type "Union[str, int]")  [assignment]
+210: error: List item 1 has incompatible type "str"; expected "int"  [list-item]
+211: error: Dict entry 0 has incompatible type "str": "str"; expected "str": "int"  [dict-item]

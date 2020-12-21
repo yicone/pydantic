@@ -1,6 +1,6 @@
-from typing import ClassVar, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, Field, Strict, create_model
 from pydantic.dataclasses import dataclass
 
 
@@ -139,3 +139,10 @@ DynamicModel = create_model('DynamicModel', __base__=Model)
 
 dynamic_model = DynamicModel(x=1, y='y')
 dynamic_model.x = 2
+
+
+class StrictModel(BaseModel):
+    ok1: Strict[int] = 3
+    ok2: Strict[Union[str, int]] = 3
+    ok3: Strict[List[int]] = [1, 2, 3]
+    ok4: Strict[Dict[str, int]] = {'a': 1, 'b': 2}
