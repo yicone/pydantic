@@ -58,6 +58,7 @@ __all__ = [
     'parse_obj_as',
     'parse_raw_as',
     # types
+    'Loose',
     'NoneStr',
     'NoneBytes',
     'StrBytes',

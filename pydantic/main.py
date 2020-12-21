@@ -33,7 +33,7 @@ from .fields import SHAPE_MAPPING, ModelField, ModelPrivateAttr, PrivateAttr, Un
 from .json import custom_pydantic_encoder, pydantic_encoder
 from .parse import Protocol, load_file, load_str_bytes
 from .schema import default_ref_template, model_schema
-from .types import PyObject, StrBytes
+from .types import LooseWrapper, PyObject, StrBytes, Strict
 from .typing import AnyCallable, ForwardRef, get_origin, is_classvar, resolve_annotations, update_field_forward_refs
 from .utils import (
     ROOT_KEY,
@@ -127,6 +127,8 @@ class BaseConfig:
     json_dumps: Callable[..., str] = json.dumps
     json_encoders: Dict[Type[Any], AnyCallable] = {}
     underscore_attrs_are_private: bool = False
+
+    strict = False
 
     @classmethod
     def get_field_info(cls, name: str) -> Dict[str, Any]:
@@ -248,6 +250,12 @@ class ModelMetaclass(ABCMeta):
             untouched_types = UNTOUCHED_TYPES + config.keep_untouched
             # annotation only fields need to come first in fields
             for ann_name, ann_type in annotations.items():
+                # in strict mode
+                if config.strict:
+                    if lenient_issubclass(ann_type, LooseWrapper):
+                        ann_type = ann_type.inner_type
+                    else:
+                        ann_type = Strict[ann_type]
                 if is_classvar(ann_type):
                     class_vars.add(ann_name)
                 elif is_valid_field(ann_name):
@@ -259,7 +267,7 @@ class ModelMetaclass(ABCMeta):
                         and not lenient_issubclass(get_origin(ann_type), Type)
                     ):
                         continue
-                    fields[ann_name] = inferred = ModelField.infer(
+                    fields[ann_name] = ModelField.infer(
                         name=ann_name,
                         value=value,
                         annotation=ann_type,

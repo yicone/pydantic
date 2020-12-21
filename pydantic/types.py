@@ -11,7 +11,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Generic,
     List,
     Optional,
     Pattern,
@@ -52,6 +51,7 @@ __all__ = [
     'NoneBytes',
     'StrBytes',
     'NoneStrBytes',
+    'Loose',
     'Strict',
     'StrictStr',
     'ConstrainedBytes',
@@ -189,6 +189,21 @@ class Strict(metaclass=StrictMeta):
     """
     Class to add `strict_validator` before any type
     e.g. Strict[int], Strict[Union[str, int]], Strict[Dict[str, int]], ...
+    """
+
+
+class LooseWrapper:
+    pass
+
+
+class LooseMeta(type):
+    def __getitem__(self, inner_type: Type[Any]) -> Type[LooseWrapper]:
+        return type('LooseWrapperValue', (LooseWrapper,), {'inner_type': inner_type})
+
+
+class Loose(metaclass=LooseMeta):
+    """
+    Class to remove the `Strict[...]` when `Config.strict = True`
     """
 
 
