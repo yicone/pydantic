@@ -26,7 +26,7 @@ from uuid import UUID
 
 from . import errors
 from .typing import display_as_type, get_args, get_origin
-from .utils import import_string, update_not_none
+from .utils import import_string, lenient_issubclass, update_not_none
 from .validators import (
     bytes_validator,
     constr_length_validator,
@@ -166,17 +166,22 @@ class StrictWrapper:
 
 class StrictMeta(type):
     def __getitem__(self, inner_type: Type[Any]) -> Type[StrictWrapper]:
+        if lenient_issubclass(inner_type, StrictWrapper):
+            return inner_type
+
         origin = get_origin(inner_type)
         bases = (StrictWrapper,) if origin else (inner_type, StrictWrapper)
         return new_class(
             f'Strict[{display_as_type(inner_type)}]',
             bases,
             {},
-            lambda ns: ns.update({
-                'inner_type': inner_type,
-                '__origin__': origin,
-                '__args__': tuple(Strict[a] for a in get_args(inner_type)) or (inner_type,),
-            })
+            lambda ns: ns.update(
+                {
+                    'inner_type': inner_type,
+                    '__origin__': origin,
+                    '__args__': tuple(Strict[a] for a in get_args(inner_type)) or (inner_type,),
+                }
+            ),
         )
 
 

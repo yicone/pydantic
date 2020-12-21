@@ -2675,3 +2675,10 @@ def test_strict():
 
     m = Model(a=['1', b'2', 3], strict_a=[1, 2, 3])
     assert m.dict() == {'a': [1, 2, 3], 'strict_a': [1, 2, 3]}
+
+    class Model(BaseModel):
+        a: int
+        b: Strict[int]
+        c: Strict[Strict[int]]
+
+    assert Model(a=1, b=2, c=3).dict() == {'a': 1, 'b': 2, 'c': 3}
