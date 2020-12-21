@@ -26,7 +26,7 @@ from . import errors as errors_
 from .class_validators import Validator, make_generic_validator, prep_validators
 from .error_wrappers import ErrorWrapper
 from .errors import NoneIsNotAllowedError
-from .types import Json, JsonWrapper, Strict, StrictWrapper
+from .types import Json, JsonWrapper, StrictWrapper
 from .typing import (
     Callable,
     ForwardRef,
