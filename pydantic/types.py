@@ -145,35 +145,23 @@ T = TypeVar('T')
 
 class Strict(Generic[T]):
     __origin__: Any
-    __args__: Tuple[Type[T], ...]
+    __args__: Tuple[Type[Any], ...]
 
     inner_type: Type[T]
-    strict = True
 
     @classmethod
     def __class_getitem__(cls, inner_type: Type[T]) -> Type[T]:
-        args = get_args(inner_type)
         origin = get_origin(inner_type)
-        if origin:
-            extra_ns = {
-                '__args__': tuple(Strict[a] for a in args) or (inner_type,),
-                '__origin__': origin,
-                'inner_type': inner_type,
-            }
-            return new_class(f'Strict[{display_as_type(inner_type)}]', (cls,), {}, lambda ns: ns.update(extra_ns))
-        else:
-            extra_ns = {
-                '__args__': (inner_type,),
-                '__origin__': origin,
-                'inner_type': inner_type,
-                'strict': True,
-            }
-            return new_class(
-                f'Strict[{display_as_type(inner_type)}]', (inner_type, cls), {}, lambda ns: ns.update(extra_ns)
-            )
+        extra_ns = {
+            'inner_type': inner_type,
+            '__origin__': origin,
+            '__args__': tuple(Strict[a] for a in get_args(inner_type)) or (inner_type,),  # type: ignore
+        }
+        bases = (cls,) if origin else (inner_type, cls)
+        return new_class(f'Strict[{display_as_type(inner_type)}]', bases, {}, lambda ns: ns.update(extra_ns))
 
     @classmethod
-    def __get_validators__(cls):
+    def __get_validators__(cls) -> 'CallableGenerator':
         yield cls.strict_validate
         try:
             yield from cls.inner_type.__get_validators__()

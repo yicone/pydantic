@@ -113,7 +113,7 @@ else:
             return (Any,) * tp._nparams
         return ()
 
-    def get_args(tp: Type[Any]) -> Tuple[Any, ...]:
+    def get_args(tp: Type[Any]) -> Tuple[Type[Any], ...]:
         """Get type arguments with all substitutions performed.
 
         For unions, basic simplifications used by Union constructor are performed.
