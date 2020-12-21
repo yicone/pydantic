@@ -2648,3 +2648,30 @@ def test_strict():
 
     m = Model(a='3', strict_a='3')
     assert m.dict() == {'a': '3', 'strict_a': '3'}
+
+    class Model(BaseModel):
+        a: List[int]
+        strict_a: Strict[List[int]]
+
+    with pytest.raises(ValidationError) as exc_info:
+        Model(a=['1', b'2', 3], strict_a=(1, 2, 3))
+    assert exc_info.value.errors() == [
+        {
+            'loc': ('strict_a',),
+            'msg': '(1, 2, 3) is not of valid type list',
+            'type': 'type_error',
+        }
+    ]
+
+    with pytest.raises(ValidationError) as exc_info:
+        Model(a=['1', b'2', 3], strict_a=['1', 2, 3])
+    assert exc_info.value.errors() == [
+        {
+            'loc': ('strict_a', 0),
+            'msg': "'1' is not of valid type int",
+            'type': 'type_error',
+        }
+    ]
+
+    m = Model(a=['1', b'2', 3], strict_a=[1, 2, 3])
+    assert m.dict() == {'a': [1, 2, 3], 'strict_a': [1, 2, 3]}

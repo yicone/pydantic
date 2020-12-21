@@ -154,7 +154,7 @@ class Strict(Generic[T]):
     def __class_getitem__(cls, inner_type: Type[T]) -> Type[T]:
         args = get_args(inner_type)
         origin = get_origin(inner_type)
-        if origin is Union:
+        if origin:
             extra_ns = {
                 '__args__': tuple(Strict[a] for a in args) or (inner_type,),
                 '__origin__': origin,
@@ -182,8 +182,9 @@ class Strict(Generic[T]):
 
     @classmethod
     def strict_validate(cls, value: Any) -> T:
-        if not isinstance(value, cls.inner_type):
-            raise TypeError(f'{value!r} is not of valid type')
+        expected_type = cls.__origin__ or cls.inner_type
+        if not isinstance(value, expected_type):
+            raise TypeError(f'{value!r} is not of valid type {display_as_type(expected_type)}')
         return value
 
 
