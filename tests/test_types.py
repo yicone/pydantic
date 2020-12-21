@@ -2655,10 +2655,13 @@ def test_strict():
 
     with pytest.raises(ValidationError) as exc_info:
         Model(a=['1', b'2', 3], strict_a=(1, 2, 3))
+
+    # in python 3.6, origin is not `list` so we keep `typing.List`
+    list_name = 'List' if sys.version_info < (3, 7) else 'list'
     assert exc_info.value.errors() == [
         {
             'loc': ('strict_a',),
-            'msg': '(1, 2, 3) is not of valid type List',
+            'msg': f'(1, 2, 3) is not of valid type {list_name}',
             'type': 'type_error',
         }
     ]
