@@ -26,7 +26,7 @@ from . import errors as errors_
 from .class_validators import Validator, make_generic_validator, prep_validators
 from .error_wrappers import ErrorWrapper
 from .errors import NoneIsNotAllowedError
-from .types import Json, JsonWrapper, Strict
+from .types import Json, JsonWrapper, Strict, StrictWrapper
 from .typing import (
     Callable,
     ForwardRef,
@@ -419,7 +419,7 @@ class ModelField(Representation):
         origin = get_origin(self.type_)
         if origin is None:
             # field is not "typing" object eg. Union, Dict, List etc.
-            if lenient_issubclass(self.type_, Strict):
+            if lenient_issubclass(self.type_, StrictWrapper):
                 self.class_validators.update({'strict_validator': Validator(self.type_.strict_validate, pre=True)})
             # allow None for virtual superclasses of NoneType, e.g. Hashable
             if isinstance(self.type_, type) and isinstance(None, self.type_):

@@ -143,28 +143,16 @@ def conbytes(*, strip_whitespace: bool = False, min_length: int = None, max_leng
 T = TypeVar('T')
 
 
-class Strict(Generic[T]):
+class StrictWrapper:
+    inner_type: Type[T]  # type: ignore
     __origin__: Any
     __args__: Tuple[Type[Any], ...]
-
-    inner_type: Type[T]
-
-    @classmethod
-    def __class_getitem__(cls, inner_type: Type[T]) -> Type[T]:
-        origin = get_origin(inner_type)
-        extra_ns = {
-            'inner_type': inner_type,
-            '__origin__': origin,
-            '__args__': tuple(Strict[a] for a in get_args(inner_type)) or (inner_type,),  # type: ignore
-        }
-        bases = (cls,) if origin else (inner_type, cls)
-        return new_class(f'Strict[{display_as_type(inner_type)}]', bases, {}, lambda ns: ns.update(extra_ns))
 
     @classmethod
     def __get_validators__(cls) -> 'CallableGenerator':
         yield cls.strict_validate
         try:
-            yield from cls.inner_type.__get_validators__()
+            yield from cls.inner_type.__get_validators__()  # type: ignore
         except AttributeError:
             pass
 
@@ -174,6 +162,29 @@ class Strict(Generic[T]):
         if not isinstance(value, expected_type):
             raise TypeError(f'{value!r} is not of valid type {display_as_type(expected_type)}')
         return value
+
+
+class StrictMeta(type):
+    def __getitem__(self, inner_type: Type[Any]) -> Type[StrictWrapper]:
+        origin = get_origin(inner_type)
+        bases = (StrictWrapper,) if origin else (inner_type, StrictWrapper)
+        return new_class(
+            f'Strict[{display_as_type(inner_type)}]',
+            bases,
+            {},
+            lambda ns: ns.update({
+                'inner_type': inner_type,
+                '__origin__': origin,
+                '__args__': tuple(Strict[a] for a in get_args(inner_type)) or (inner_type,),
+            })
+        )
+
+
+class Strict(metaclass=StrictMeta):
+    """
+    Class to add `strict_validator` before any type
+    e.g. Strict[int], Strict[Union[str, int]], Strict[Dict[str, int]], ...
+    """
 
 
 # This types superclass should be List[T], but cython chokes on that...

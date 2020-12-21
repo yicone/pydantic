@@ -2658,7 +2658,7 @@ def test_strict():
     assert exc_info.value.errors() == [
         {
             'loc': ('strict_a',),
-            'msg': '(1, 2, 3) is not of valid type list',
+            'msg': '(1, 2, 3) is not of valid type List',
             'type': 'type_error',
         }
     ]
