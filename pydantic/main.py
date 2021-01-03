@@ -127,6 +127,7 @@ class BaseConfig:
     json_dumps: Callable[..., str] = json.dumps
     json_encoders: Dict[Type[Any], AnyCallable] = {}
     underscore_attrs_are_private: bool = False
+    exclude_fields: Set[str] = set()
 
     @classmethod
     def get_field_info(cls, name: str) -> Dict[str, Any]:
@@ -231,6 +232,13 @@ class ModelMetaclass(ABCMeta):
         config = inherit_config(namespace.get('Config'), config)
         validators = inherit_validators(extract_validators(namespace), validators)
         vg = ValidatorGroup(validators)
+
+        if config.exclude_fields:
+            unknown_fields = config.exclude_fields - set(fields)
+            if unknown_fields:
+                raise ConfigError(f'Some fields to exclude do not exist : {", ".join(map(repr, unknown_fields))}')
+            for field_to_exclude in config.exclude_fields:
+                fields.pop(field_to_exclude)
 
         for f in fields.values():
             f.set_config(config)
