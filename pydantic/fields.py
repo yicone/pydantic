@@ -572,6 +572,9 @@ class ModelField(Representation):
                 f'you might need to call {cls.__name__}.update_forward_refs().'
             )
 
+        if v in cls.__config__.any_values:
+            return v, None
+
         errors: Optional['ErrorList']
         if self.pre_validators:
             v, errors = self._apply_validators(v, values, loc, cls, self.pre_validators)
