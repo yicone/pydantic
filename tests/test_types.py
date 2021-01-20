@@ -15,6 +15,7 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Mapping,
     MutableSet,
     NewType,
     Optional,
@@ -22,6 +23,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
 )
 from uuid import UUID
 
@@ -75,6 +77,11 @@ try:
     import email_validator
 except ImportError:
     email_validator = None
+
+try:
+    import typingx
+except ImportError:
+    typingx = None
 
 
 class ConBytesModel(BaseModel):
@@ -2661,3 +2668,84 @@ def test_none(value_type):
         {'loc': ('my_none_dict', 'a'), 'msg': 'value is not None', 'type': 'type_error.not_none'},
         {'loc': ('my_json_none',), 'msg': 'value is not None', 'type': 'type_error.not_none'},
     ]
+
+
+def test_default_union():
+    class DefaultModel(BaseModel):
+        v: Union[int, bool, str]
+
+    assert DefaultModel(v=True).json() == '{"v": 1}'
+    assert DefaultModel(v=1).json() == '{"v": 1}'
+    assert DefaultModel(v='1').json() == '{"v": 1}'
+
+    # In 3.6, Union[int, bool, str] == Union[int, str]
+    allowed_json_types = ('integer', 'string') if sys.version_info[:2] == (3, 6) else ('integer', 'boolean', 'string')
+
+    assert DefaultModel.schema() == {
+        'title': 'DefaultModel',
+        'type': 'object',
+        'properties': {'v': {'title': 'V', 'anyOf': [{'type': t} for t in allowed_json_types]}},
+        'required': ['v'],
+    }
+
+
+def test_smart_union():
+    class SmartModel(BaseModel):
+        v: Union[int, bool, str]
+
+        class Config:
+            smart_union = True
+
+    if typingx is None:
+        with pytest.warns(UserWarning, match='Smart Union will not be able to work with typing types'):
+            assert SmartModel(v=1).json() == '{"v": 1}'
+            assert SmartModel(v=True).json() == '{"v": true}'
+            assert SmartModel(v='1').json() == '{"v": "1"}'
+    else:
+        assert SmartModel(v=1).json() == '{"v": 1}'
+        assert SmartModel(v=True).json() == '{"v": true}'
+        assert SmartModel(v='1').json() == '{"v": "1"}'
+
+    # In 3.6, Union[int, bool, str] == Union[int, str]
+    allowed_json_types = ('integer', 'string') if sys.version_info[:2] == (3, 6) else ('integer', 'boolean', 'string')
+
+    assert SmartModel.schema() == {
+        'title': 'SmartModel',
+        'type': 'object',
+        'properties': {'v': {'title': 'V', 'anyOf': [{'type': t} for t in allowed_json_types]}},
+        'required': ['v'],
+    }
+
+
+def test_default_union_complex():
+    class DefaultModel(BaseModel):
+        values: Union[Dict[str, str], List[str]]
+
+    assert DefaultModel(values={'L': '1'}).json() == '{"values": {"L": "1"}}'
+    assert DefaultModel(values=['L1']).json() == '{"values": {"L": "1"}}'  # dict(['L1']) == {'L': '1'}
+
+
+@pytest.mark.skipif(not typingx, reason='typingx is not installed')
+def test_smart_union_complex():
+    class DefaultModel(BaseModel):
+        values: Union[Dict[str, str], List[str]]
+
+        class Config:
+            smart_union = True
+
+    assert DefaultModel(values={'L': '1'}).json() == '{"values": {"L": "1"}}'
+    assert DefaultModel(values=['L1']).json() == '{"values": ["L1"]}'
+    assert DefaultModel(values=('L1',)).json() == '{"values": {"L": "1"}}'  # still coerce as tuple is not a list
+
+
+@pytest.mark.skipif(not typingx, reason='typingx is not installed')
+def test_smart_union_complex_2():
+    class DefaultModel(BaseModel):
+        values: Union[Mapping[str, str], Sequence[str]]
+
+        class Config:
+            smart_union = True
+
+    assert DefaultModel(values={'L': '1'}).json() == '{"values": {"L": "1"}}'
+    assert DefaultModel(values=['L1']).json() == '{"values": ["L1"]}'
+    assert DefaultModel(values=('L1',)).json() == '{"values": ["L1"]}'

@@ -62,6 +62,8 @@ class UndefinedType:
 Undefined = UndefinedType()
 
 if TYPE_CHECKING:
+    from typingx.utils import OneOrManyTypes
+
     from .class_validators import ValidatorsList  # noqa: F401
     from .error_wrappers import ErrorList
     from .main import BaseConfig, BaseModel  # noqa: F401
@@ -744,6 +746,37 @@ class ModelField(Representation):
     ) -> 'ValidateReturn':
         if self.sub_fields:
             errors = []
+
+            if get_origin(self.type_) is Union and self.model_config.smart_union:
+                try:
+                    from typingx import isinstancex
+
+                except ImportError:
+                    warnings.warn(
+                        'Smart Union will not be able to work with typing types. '
+                        'You should install `typingx` for that.',
+                        UserWarning,
+                    )
+
+                    def isinstancex(obj: Any, tp: 'OneOrManyTypes') -> bool:
+                        try:
+                            return isinstance(obj, tp)
+                        except TypeError:
+                            return False
+
+                # 1st pass: check if the value is an exact instance of one of the Union types
+                # (e.g. to avoid coercing a bool into an int)
+                for field in self.sub_fields:
+                    if v.__class__ is field.outer_type_:
+                        return v, None
+
+                # 2nd pass: check if the value is an instance of any subclass of the Union types
+                for field in self.sub_fields:
+                    if isinstancex(v, field.outer_type_):
+                        return v, None
+
+            # 1st pass by default or 3rd pass with `smart_union` enabled:
+            # check if the value can be coerced into one of the Union types
             for field in self.sub_fields:
                 value, error = field.validate(v, values, loc=loc, cls=cls)
                 if error:

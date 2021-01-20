@@ -12,7 +12,7 @@ def version_info() -> str:
     from .main import compiled
 
     optional_deps = []
-    for p in ('devtools', 'dotenv', 'email-validator', 'typing-extensions'):
+    for p in ('devtools', 'dotenv', 'email-validator', 'typing-extensions', 'typingx'):
         try:
             import_module(p.replace('-', '_'))
         except ImportError:

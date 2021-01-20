@@ -132,6 +132,7 @@ setup(
         'email': ['email-validator>=1.0.3'],
         'typing_extensions': ['typing-extensions>=3.7.2'],
         'dotenv': ['python-dotenv>=0.10.4'],
+        'typingx': ['typingx>=0.2.3'],
     },
     ext_modules=ext_modules,
 )
