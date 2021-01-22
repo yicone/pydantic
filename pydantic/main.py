@@ -580,15 +580,32 @@ class BaseModel(Representation, metaclass=ModelMetaclass):
         return m
 
     @classmethod
-    def construct(cls: Type['Model'], _fields_set: Optional['SetStr'] = None, **values: Any) -> 'Model':
+    def construct(
+        cls: Type['Model'], _fields_set: Optional['SetStr'] = None, *, __recursive__: bool = False, **values: Any
+    ) -> 'Model':
         """
         Creates a new model setting __dict__ and __fields_set__ from trusted or pre-validated data.
         Default values are respected, but no other validation is performed.
         """
         m = cls.__new__(cls)
-        # default field values
-        fields_values = {name: field.get_default() for name, field in cls.__fields__.items() if not field.required}
-        fields_values.update(values)
+        fields_values: Dict[str, Any] = {}
+
+        if __recursive__:
+            for name, field in cls.__fields__.items():
+                if name in values:
+                    if issubclass(field.type_, BaseModel):
+                        fields_values[name] = field.outer_type_.construct(**values[name], __recursive__=True)
+                    else:
+                        fields_values[name] = values[name]
+                elif not field.required:
+                    fields_values[name] = field.get_default()
+        else:
+            for name, field in cls.__fields__.items():
+                if name in values:
+                    fields_values[name] = values[name]
+                elif not field.required:
+                    fields_values[name] = field.get_default()
+
         object_setattr(m, '__dict__', fields_values)
         if _fields_set is None:
             _fields_set = set(values.keys())
