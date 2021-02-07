@@ -1,5 +1,5 @@
 import warnings
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Iterable as CollectionsIterable
 from typing import (
     TYPE_CHECKING,
@@ -752,6 +752,13 @@ class ModelField(Representation):
             result[key_result] = value_result
         if errors:
             return v, errors
+        elif isinstance(v, Mapping):
+            same_mapping_type_res = _get_same_mapping_type_res(v, result)
+            if same_mapping_type_res is not None:
+                return same_mapping_type_res, None
+            else:
+                warnings.warn(f'Could not keep {v.__class__} when validating. Fallback done on dict...')
+                return result, None
         else:
             return result, None
 
@@ -866,3 +873,20 @@ def PrivateAttr(
         default,
         default_factory=default_factory,
     )
+
+
+def _get_same_mapping_type_res(mapping: T, converted: Dict[Any, Any]) -> Optional[T]:
+    """
+    Try to return the same object as `mapping` but with `converted` values
+    """
+    mapping_type = type(mapping)
+    if mapping_type is dict:
+        return converted  # type: ignore
+    elif mapping_type is defaultdict:
+        return defaultdict(mapping.default_factory, **converted)  # type: ignore
+    else:
+        try:
+            # Counter, OrderedDict, UserDict, ...
+            return mapping_type(**converted)  # type: ignore
+        except TypeError:
+            return None
