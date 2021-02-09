@@ -4,6 +4,7 @@ from collections.abc import Iterable as CollectionsIterable
 from typing import (
     TYPE_CHECKING,
     Any,
+    Counter,
     Deque,
     Dict,
     FrozenSet,
@@ -495,7 +496,7 @@ class ModelField(Representation):
             self.shape = SHAPE_SEQUENCE
         elif issubclass(origin, Mapping):
             self.key_field = self._create_sub_type(get_args(self.type_)[0], 'key_' + self.name, for_keys=True)
-            self.type_ = get_args(self.type_)[1]
+            self.type_ = int if issubclass(origin, Counter) else get_args(self.type_)[1]
             self.shape = SHAPE_MAPPING
         # Equality check as almost everything inherits form Iterable, including str
         # check for Iterable and CollectionsIterable, as it could receive one even when declared with the other
@@ -760,18 +761,20 @@ class ModelField(Representation):
         target_type = get_origin(self.outer_type_)
         original_type = type(original)
 
+        # when type is `Mapping[KT, KV]`, we try to avoid coercing to `dict` unwillingly
         if is_mapping_type(target_type):
             target_type = original_type
 
         if target_type is dict:
             return converted
         elif target_type is defaultdict:
-            return defaultdict(getattr(original, 'default_factory', None), **converted)
+            return defaultdict(getattr(original, 'default_factory', None), converted)
         else:
             try:
                 # Counter, OrderedDict, UserDict, ...
-                return target_type(**converted)
+                return target_type(converted)
             except TypeError:
+                warnings.warn(f'Could not convert dictionary to {target_type.__name__!r}', UserWarning)
                 return converted
 
     def _validate_singleton(
