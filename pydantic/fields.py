@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Counter,
+    DefaultDict,
     Deque,
     Dict,
     FrozenSet,
@@ -765,9 +766,9 @@ class ModelField(Representation):
         if is_mapping_type(target_type):
             target_type = original_type
 
-        if target_type is dict:
+        if target_type in {dict, Dict}:
             return converted
-        elif target_type is defaultdict:
+        elif target_type in {defaultdict, DefaultDict}:
             return defaultdict(getattr(original, 'default_factory', None), converted)
         else:
             try:
