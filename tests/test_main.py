@@ -1,6 +1,7 @@
 import sys
+from collections import defaultdict
 from enum import Enum
-from typing import Any, Callable, ClassVar, Dict, List, Mapping, Optional, Type, get_type_hints
+from typing import Any, Callable, ClassVar, DefaultDict, Dict, List, Mapping, Optional, Type, get_type_hints
 from uuid import UUID, uuid4
 
 import pytest
@@ -1473,3 +1474,62 @@ def test_inherited_model_field_untouched():
 
     assert id(image_1) == id(item.images[0])
     assert id(image_2) == id(item.images[1])
+
+
+def test_mapping_retains_type_subclass():
+    class Map(dict):
+        pass
+
+    class Model(BaseModel):
+        field: Mapping[str, Mapping[str, int]]
+
+    m = Model(field=Map(outer=Map(inner=42)))
+    assert isinstance(m.field, Map)
+    assert isinstance(m.field['outer'], Map)
+    assert m.field['outer']['inner'] == 42
+
+
+def test_mapping_retains_type_defaultdict():
+    class Model(BaseModel):
+        field: Mapping[str, int]
+
+    d = defaultdict(int)
+    d[1] = '2'
+    d['3']
+
+    m = Model(field=d)
+    assert isinstance(m.field, defaultdict)
+    assert m.field['1'] == 2
+    assert m.field['3'] == 0
+
+
+def test_mapping_retains_type_dict_fallback():
+    class Map(dict):
+        def __init__(self, *args, **kwargs):
+            if args or kwargs:
+                raise TypeError('test')
+            super().__init__(*args, **kwargs)
+
+    class Model(BaseModel):
+        field: Mapping[str, int]
+
+    d = Map()
+    d['one'] = 1
+    d['two'] = 2
+
+    with pytest.warns(UserWarning, match="Could not convert dictionary to 'Map'"):
+        m = Model(field=d)
+    assert isinstance(m.field, dict)
+    assert m.field['one'] == 1
+    assert m.field['two'] == 2
+
+
+def test_default_dict():
+    class Model(BaseModel):
+        x: DefaultDict[int, str]
+
+    d = defaultdict(str)
+    d['1']
+    m = Model(x=d)
+    m.x['a']
+    assert repr(m) == "Model(x=defaultdict(<class 'str'>, {1: '', 'a': ''}))"
