@@ -1019,11 +1019,14 @@ def validate_model(  # noqa: C901 (ignore complexity)
             value = input_data.get(field.name, _missing)
             using_name = True
 
+        always_validators_only = False
+
         if value is _missing:
             if field.required:
                 errors.append(ErrorWrapper(MissingError(), loc=field.alias))
                 continue
 
+            always_validators_only = True
             value = field.get_default()
 
             if not config.validate_all and not field.validate_always:
@@ -1034,7 +1037,9 @@ def validate_model(  # noqa: C901 (ignore complexity)
             if check_extra:
                 names_used.add(field.name if using_name else field.alias)
 
-        v_, errors_ = field.validate(value, values, loc=field.alias, cls=cls_)
+        v_, errors_ = field.validate(
+            value, values, loc=field.alias, cls=cls_, always_validators_only=always_validators_only
+        )
         if isinstance(errors_, ErrorWrapper):
             errors.append(errors_)
         elif isinstance(errors_, list):
