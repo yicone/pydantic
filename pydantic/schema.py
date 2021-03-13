@@ -963,18 +963,23 @@ def get_annotation_with_constraints(annotation: Any, field_info: FieldInfo) -> T
 
             if issubclass(origin, List) and (field_info.min_items is not None or field_info.max_items is not None):
                 used_constraints.update({'min_items', 'max_items'})
-                return conlist(go(args[0]), min_items=field_info.min_items, max_items=field_info.max_items)
+                (item_type,) = args or (Any,)
+                return conlist(go(item_type), min_items=field_info.min_items, max_items=field_info.max_items)
 
             if issubclass(origin, Set) and (field_info.min_items is not None or field_info.max_items is not None):
                 used_constraints.update({'min_items', 'max_items'})
-                return conset(go(args[0]), min_items=field_info.min_items, max_items=field_info.max_items)
+                (item_type,) = args or (Any,)
+                return conset(go(item_type), min_items=field_info.min_items, max_items=field_info.max_items)
 
             for t in (Tuple, List, Set, FrozenSet, Sequence):
+                if not args:
+                    args = (Any, ...) if t is Tuple else (Any,)
                 if issubclass(origin, t):  # type: ignore
                     return t[tuple(go(a) for a in args)]  # type: ignore
 
             if issubclass(origin, Dict):
-                return Dict[args[0], go(args[1])]  # type: ignore
+                key_type, value_type = args or (Any, Any)
+                return Dict[key_type, go(value_type)]  # type: ignore
 
         attrs: Optional[Tuple[str, ...]] = None
         constraint_func: Optional[Callable[..., type]] = None

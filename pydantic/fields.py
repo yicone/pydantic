@@ -1,5 +1,5 @@
 from collections import defaultdict, deque
-from collections.abc import Iterable as CollectionsIterable
+from collections.abc import Callable as CollectionsCallable, Iterable as CollectionsIterable
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,7 +31,6 @@ from .errors import ConfigError, NoneIsNotAllowedError
 from .types import Json, JsonWrapper
 from .typing import (
     NONE_TYPES,
-    Callable,
     ForwardRef,
     NoArgAnyCallable,
     NoneType,
@@ -524,7 +523,7 @@ class ModelField(Representation):
             self.type_ = get_args(self.type_)[0]
             self._type_analysis()
             return
-        if origin is Callable:
+        if origin is CollectionsCallable:
             return
         if origin is Union:
             types_ = []
@@ -574,7 +573,7 @@ class ModelField(Representation):
                     {f'list_{i}': Validator(validator, pre=True) for i, validator in enumerate(get_validators())}
                 )
 
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_LIST
         elif issubclass(origin, Set):
             # Create self validators
@@ -584,33 +583,36 @@ class ModelField(Representation):
                     {f'set_{i}': Validator(validator, pre=True) for i, validator in enumerate(get_validators())}
                 )
 
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_SET
         elif issubclass(origin, FrozenSet):
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_FROZENSET
         elif issubclass(origin, Deque):
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_DEQUE
         elif issubclass(origin, Sequence):
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_SEQUENCE
         elif issubclass(origin, DefaultDict):
-            self.key_field = self._create_sub_type(get_args(self.type_)[0], 'key_' + self.name, for_keys=True)
-            self.type_ = get_args(self.type_)[1]
+            key_type, value_type = get_args(self.type_) or (Any, Any)
+            self.key_field = self._create_sub_type(key_type, 'key_' + self.name, for_keys=True)
+            self.type_ = value_type
             self.shape = SHAPE_DEFAULTDICT
         elif issubclass(origin, Dict):
-            self.key_field = self._create_sub_type(get_args(self.type_)[0], 'key_' + self.name, for_keys=True)
-            self.type_ = get_args(self.type_)[1]
+            key_type, value_type = get_args(self.type_) or (Any, Any)
+            self.key_field = self._create_sub_type(key_type, 'key_' + self.name, for_keys=True)
+            self.type_ = value_type
             self.shape = SHAPE_DICT
         elif issubclass(origin, Mapping):
-            self.key_field = self._create_sub_type(get_args(self.type_)[0], 'key_' + self.name, for_keys=True)
-            self.type_ = get_args(self.type_)[1]
+            key_type, value_type = get_args(self.type_) or (Any, Any)
+            self.key_field = self._create_sub_type(key_type, 'key_' + self.name, for_keys=True)
+            self.type_ = value_type
             self.shape = SHAPE_MAPPING
         # Equality check as almost everything inherits form Iterable, including str
         # check for Iterable and CollectionsIterable, as it could receive one even when declared with the other
         elif origin in {Iterable, CollectionsIterable}:
-            self.type_ = get_args(self.type_)[0]
+            (self.type_,) = get_args(self.type_) or (Any,)
             self.shape = SHAPE_ITERABLE
             self.sub_fields = [self._create_sub_type(self.type_, f'{self.name}_type')]
         elif issubclass(origin, Type):  # type: ignore
