@@ -172,7 +172,7 @@ def replace_types(type_: Any, type_map: Mapping[Any, Any]) -> Any:
             # `type` or `collections.abc.Callable` need to be translated.
             # See: https://www.python.org/dev/peps/pep-0585
             origin_type = getattr(typing, type_._name)
-        return origin_type[resolved_type_args]
+        return origin_type[resolved_type_args]  # type: ignore
 
     # We handle pydantic generic models separately as they don't have the same
     # semantics as "typing" classes or generic aliases
