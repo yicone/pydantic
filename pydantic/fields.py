@@ -423,7 +423,6 @@ class ComputedField(Representation):
         'config',
         'model_field',
         'required',
-        'descriptor',
     )
 
     def __init__(
