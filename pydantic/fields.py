@@ -23,6 +23,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
 
 from typing_extensions import Annotated
@@ -359,36 +360,27 @@ SHAPE_NAME_LOOKUP = {
 MAPPING_LIKE_SHAPES: Set[int] = {SHAPE_DEFAULTDICT, SHAPE_DICT, SHAPE_MAPPING, SHAPE_COUNTER}
 
 
-class DescriptorInfos:
-    __slots__ = ('type_', 'fget', 'fset')
+def _get_descriptor_infos(descriptor: Any) -> Tuple[Any, 'FGet', Optional['FSet']]:
+    import inspect
 
-    def __init__(self, type_: type, fget: 'FGet', fset: Optional['FSet']) -> None:
-        self.type_: type = type_
-        self.fget: 'FGet' = fget
-        self.fset: Optional['FSet'] = fset
+    fset = None
 
-    @classmethod
-    def infer(cls, descriptor: Any) -> 'DescriptorInfos':
-        import inspect
+    if isinstance(descriptor, property):
+        fget = descriptor.fget
+        fset = descriptor.fset
+    else:
+        _self_param, getter_param, *set_del_params = inspect.signature(
+            descriptor.__class__.__init__
+        ).parameters.values()
+        fget = getattr(descriptor, getter_param.name)
+        if len(set_del_params) > 0:
+            fset = getattr(descriptor, set_del_params[0].name)
 
-        fset = None
+    type_ = inspect.signature(fget).return_annotation
+    if type_ is inspect._empty:  # type: ignore[attr-defined]
+        type_ = Any
 
-        if isinstance(descriptor, property):
-            fget = descriptor.fget
-            fset = descriptor.fset
-        else:
-            _self_param, getter_param, *set_del_params = inspect.signature(
-                descriptor.__class__.__init__
-            ).parameters.values()
-            fget = getattr(descriptor, getter_param.name)
-            if len(set_del_params) > 0:
-                fset = getattr(descriptor, set_del_params[0].name)
-
-        type_ = inspect.signature(fget).return_annotation
-        if type_ is inspect._empty:  # type: ignore[attr-defined]
-            type_ = Any
-
-        return cls(type_, fget, fset)  # type: ignore
+    return type_, cast('FGet', fget), cast('FSet', fset)
 
 
 def field(
@@ -420,7 +412,9 @@ def field(
 class ComputedField(Representation):
     __slots__ = (
         'descriptor',
-        'descriptor_infos',
+        'type_',
+        'fget',
+        'fset',
         'name',
         'class_validators',
         'alias',
@@ -443,9 +437,12 @@ class ComputedField(Representation):
         config: Optional[Type['BaseConfig']] = None,
         model_field: Optional['ModelField'] = None,
     ) -> None:
-        self.descriptor = descriptor
-        self.descriptor_infos = DescriptorInfos.infer(descriptor)
-        self.name: str = name or self.descriptor_infos.fget.__name__
+        self.descriptor: Any = descriptor
+        type_, fget, fset = _get_descriptor_infos(descriptor)
+        self.type_: Any = type_
+        self.fget: 'FGet' = fget
+        self.fset: Optional['FSet'] = fset
+        self.name: str = name or self.fget.__name__
         self.class_validators: Optional[Dict[str, 'Validator']] = None
 
         self.alias: str = alias or self.name
@@ -462,7 +459,7 @@ class ComputedField(Representation):
             alias=self.alias,
             title=self.title,
             description=self.description or self.descriptor.__doc__,
-            read_only=self.descriptor_infos.fset is None,
+            read_only=self.fset is None,
         )
 
     def __get__(self, instance: Optional['BaseModel'], owner: Any = None) -> Any:
@@ -500,7 +497,7 @@ class ComputedField(Representation):
         self.config = config
         self.model_field = ModelField(
             name=self.name,
-            type_=self.descriptor_infos.type_,
+            type_=self.type_,
             class_validators=self.class_validators,
             model_config=self.config,
             default=None,
