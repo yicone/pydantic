@@ -40,6 +40,7 @@ from pydantic import (
     StrictStr,
     create_model,
     create_model_from_typeddict,
+    field,
     root_validator,
     stricturl,
     validate_arguments,
@@ -290,3 +291,23 @@ def dont_check_path_existence() -> None:
 
 create_model_from_typeddict(SomeDict)(**obj)
 DynamicModel = create_model('DynamicModel')
+
+
+# Decorated property is not yet supported
+# https://github.com/python/mypy/issues/1362
+class Square(BaseModel):
+    side: float
+
+    @field(alias='the area')  # type: ignore[misc]
+    @property
+    def area(self) -> float:
+        return self.side ** 2
+
+    @area.setter
+    def area(self, area: float) -> None:
+        self.side = area ** 0.5
+
+
+sq = Square(side=10)
+sq.area = 13
+
