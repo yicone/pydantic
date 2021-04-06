@@ -96,7 +96,6 @@ if TYPE_CHECKING:
 
     FGet = Callable[[Optional[BaseModel], str], Any]
     FSet = Callable[[Optional[BaseModel], Any], None]
-    FDel = Callable[[Optional[BaseModel], str], None]
 
 
 class FieldInfo(Representation):
@@ -367,8 +366,8 @@ def _get_descriptor_infos(descriptor: Any) -> Tuple[Any, 'FGet', Optional['FSet'
     fset = None
 
     if isinstance(descriptor, property):
-        fget = descriptor.fget
-        fset = descriptor.fset
+        fget = cast('FGet', descriptor.fget)
+        fset = cast('FSet', descriptor.fset)
     else:
         _self_param, getter_param, *set_del_params = inspect.signature(
             descriptor.__class__.__init__
@@ -382,7 +381,7 @@ def _get_descriptor_infos(descriptor: Any) -> Tuple[Any, 'FGet', Optional['FSet'
     if type_ is sig.empty:
         type_ = Any
 
-    return type_, cast('FGet', fget), cast('FSet', fset)
+    return type_, fget, fset
 
 
 @overload
@@ -397,7 +396,7 @@ def field(
 
 @overload
 def field(
-    func: T,
+    func: Any,
     *,
     alias: Optional[str] = None,
     title: Optional[str] = None,
