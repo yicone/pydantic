@@ -41,6 +41,7 @@ from pydantic import (
     create_model,
     create_model_from_typeddict,
     field,
+    computed_field,
     root_validator,
     stricturl,
     validate_arguments,
@@ -298,7 +299,7 @@ DynamicModel = create_model('DynamicModel')
 class Square(BaseModel):
     side: float
 
-    @field(alias='the area')  # type: ignore[misc]
+    @computed_field(alias='the area')  # type: ignore[misc]
     @property
     def area(self) -> float:
         return self.side ** 2
