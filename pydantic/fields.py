@@ -557,6 +557,9 @@ class ComputedField(Representation):
                 )
 
             return update_computed_field
+        
+        # https://stackoverflow.com/a/49902096/251496
+        return self.__getattribute__(name)
 
     def prepare(
         self,
