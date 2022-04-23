@@ -27,7 +27,9 @@ from typing import (
     overload,
 )
 
+import copy
 from typing_extensions import Annotated
+from functools import cached_property
 
 from . import errors as errors_
 from .class_validators import Validator, make_generic_validator, prep_validators
@@ -560,6 +562,17 @@ class ComputedField(Representation):
         
         # https://stackoverflow.com/a/49902096/251496
         return self.__getattribute__(name)
+
+    def __deepcopy__(self, memo={}):
+        if isinstance(self.descriptor, cached_property):
+            memo[id(self.descriptor)] = self.descriptor
+        
+        cls = self.__class__
+        result = cls.__new__(cls)
+        for s in self.__slots__:
+            value = getattr(self, s)
+            setattr(result, s, copy.deepcopy(value, memo))
+        return result
 
     def prepare(
         self,
